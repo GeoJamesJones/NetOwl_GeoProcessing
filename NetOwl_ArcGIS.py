@@ -323,11 +323,12 @@ for j in os.listdir(rdfOutDir):
 # now add all the rdfobjGeo to the map as featureclass
 wk = arcpy.GetParameterAsText(2)
 sr = arcpy.SpatialReference(4326)  # TODO: this may not be the correct sr
-template_ws = r'C:\Users\jame9353\Documents\ArcGIS\Projects\Defense and Intel Forum\NetOwl_GeoProcessing-master\NetOwl_GeoProcessing-master\Template.gdb'
+template_ws = arcpy.GetParameterAsText(3)
 
 # # check to see if fc already exists
 if arcpy.Exists(os.path.join(wk,"netowl_fc")) is False:
     arcpy.CreateFeatureclass_management(wk, "netowl_fc", "POINT", os.path.join(template_ws,"netowl_template_fc"), 'No', 'No', sr)  # noqa: E501
+    netowl_fc = os.path.join(wk, "netowl_fc")
 
 entslist = ["RDFID", "RDFVALUE", "TIMEST", "RDFLINKS", "TYPE", "SUBTYPE", "ORGDOC", "UNIQUEID", "LINKDETAILS", "SHAPE@XY"]   # noqa: E501
 iCur = arcpy.da.InsertCursor("netowl_fc", entslist)
@@ -357,6 +358,7 @@ del iCur
 # for nongeo table
 if arcpy.Exists(os.path.join(wk,"netowl_nogeo")) is False:
     arcpy.CreateTable_management(wk, "netowl_nogeo", os.path.join(template_ws,"netowl_template_nogeo"))
+    nogeo = os.path.join(wk, "netowl_nogeo")
 
 iCur_links = arcpy.da.InsertCursor("netowl_nogeo", ["RDFID", "RDFVALUE", "TIMEST", "RDFLINKS", "ORGDOC", "UNIQUEID", "TYPE"])  # noqa: E501
 
@@ -380,6 +382,7 @@ del iCur_links
 # ---------- relationship links table ----------
 if arcpy.Exists(os.path.join(wk,"netowl_links")) is False:
     arcpy.CreateTable_management(wk, "netowl_links", os.path.join(template_ws,"netowl_template_links"))
+    netowl_links = os.path.join(wk, "netowl_links")
 
 iCur_links = arcpy.da.InsertCursor("netowl_links", ["LINKID", "FROMID", "TOID", "FROMVALUE", "TOVALUE", "FROMROLE", "TOROLE", "FROMROLETYPE", "TOROLETYPE", "UNIQUETS"])  # noqa: E501
 
@@ -402,6 +405,11 @@ for lo in linkobjs:
 ents = (doc['entity'])
 
 del iCur_links
+
+arcpy.AddMessage("Creating relationship classes...")
+
+arcpy.CreateRelationshipClass_management(netowl_fc, netowl_links, os.path.join(wk, "FC_Links"), "SIMPLE", "netowl_fc", "netowl_links", "BOTH", "ONE_TO_MANY", "ATTRIBUTED", "UNIQUEID", "TOID")
+arcpy.CreateRelationshipClass_management(netowl_fc, nogeo, os.path.join(wk, "FC_Entities"), "SIMPLE", "netowl_fc", "netowl_entities", "BOTH", "ONE_TO_MANY", "ATTRIBUTED", "ORGDOC", "ORGDOC")
 
 
 print("Script completed")
